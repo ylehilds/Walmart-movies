@@ -1,0 +1,37 @@
+server:
+  port: 8080
+
+azure:
+  cosmos:
+    endpoint: ${AZURE_COSMOS_URI:https://localhost:8081/}
+    uri: ${AZURE_COSMOS_URI:https://localhost:8081/}
+    key: ${AZURE_COSMOS_KEY:C2y6yDjf5/R+ob0N8A7Cgv30VRDJIWEHLM+/rt6BQaQ==}
+    database: ${AZURE_COSMOS_DB:moviesdb}
+    consistency-level: EVENTUAL
+    endpoint-discovery-enabled: false
+    connection-mode: GATEWAY
+
+spring:
+  application:
+    name: movies-api
+  kafka:
+    bootstrap-servers: ${SPRING_KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: movies-api
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+movie:
+  events:
+    topic: ${MOVIE_EVENTS_TOPIC:movies.events}
+
+movies:
+  persistence: ${MOVIES_PERSISTENCE:memory}
+  cosmos:
+    autocreate: ${MOVIES_COSMOS_AUTOCREATE:false}

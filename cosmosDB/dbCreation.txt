@@ -1,0 +1,76 @@
+Using Azure CLI to recreate the exact shape your app expects:
+• Cosmos account: API for NoSQL
+• Database: moviesdb
+• Container: movies
+• Partition key: /id
+
+From your repo, the app expects:
+• DB name from .env: moviesdb
+• Container from CosmosStoreConfig.java: movies
+• Partition key from CosmosStoreConfig.java: /id
+
+Run this in your terminal:
+
+az login
+
+RG="walmart-rg"
+LOCATION="westus2"
+ACCOUNT="walmart-movies-$(date +%s)"
+DB="moviesdb"
+CONTAINER="movies"
+
+az group create \
+  --name "$RG" \
+  --location "$LOCATION"
+
+az cosmosdb create \
+  --name "$ACCOUNT" \
+  --resource-group "$RG" \
+  --locations regionName="$LOCATION" failoverPriority=0 isZoneRedundant=False \
+  --default-consistency-level Eventual \
+  --enable-free-tier true
+
+az cosmosdb sql database create \
+  --account-name "$ACCOUNT" \
+  --resource-group "$RG" \
+  --name "$DB"
+
+az cosmosdb sql container create \
+  --account-name "$ACCOUNT" \
+  --resource-group "$RG" \
+  --database-name "$DB" \
+  --name "$CONTAINER" \
+  --partition-key-path "/id" \
+  --throughput 400
+
+ENDPOINT=$(az cosmosdb show \
+  --name "$ACCOUNT" \
+  --resource-group "$RG" \
+  --query documentEndpoint \
+  --output tsv)
+
+KEY=$(az cosmosdb keys list \
+  --name "$ACCOUNT" \
+  --resource-group "$RG" \
+  --type keys \
+  --query primaryMasterKey \
+  --output tsv)
+
+echo "AZURE_COSMOS_URI=$ENDPOINT"
+echo "AZURE_COSMOS_KEY=$KEY"
+
+Then put those values in .env:
+MOVIES_PERSISTENCE=cosmos
+MOVIES_COSMOS_AUTOCREATE=false
+AZURE_COSMOS_URI=<endpoint>
+AZURE_COSMOS_KEY=<key>
+AZURE_COSMOS_DB=moviesdb
+COSMOS_EMULATOR_SKIP=true
+
+Then run:
+docker compose up --build
+
+Notes:
+• Free tier is only available on one Cosmos DB account per subscription.
+• 400 RU/s for one container is within the free-tier allowance.
+If the az cosmosdb create step says free tier is unavailable, your subscription already has a free-tier Cosmos account.
